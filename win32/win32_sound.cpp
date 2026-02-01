@@ -16,11 +16,18 @@
 #define CLAMP(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 // available sound output methods
-CXAudio2 S9xXAudio2;
 CWaveOut S9xWaveOut;
+#ifndef _M_ARM64
+CXAudio2 S9xXAudio2;
+#endif
 
 // Interface used to access the sound output
-IS9xSoundOutput *S9xSoundOutput = &S9xXAudio2;
+#ifdef _M_ARM64
+IS9xSoundOutput* S9xSoundOutput = &S9xWaveOut;
+#else
+IS9xSoundOutput* S9xSoundOutput = &S9xXAudio2;
+#endif
+
 
 static double last_volume = 1.0;
 
@@ -43,7 +50,7 @@ bool ReInitSound()
 		else
 		{
 			GUI.AutomaticInputRate = false;
-			Settings.SoundInputRate = 31950;
+			Settings.SoundInputRate = 32040;
 		}
 	}
 
@@ -72,16 +79,20 @@ bool8 S9xOpenSoundDevice ()
 {
 	S9xSetSamplesAvailableCallback (NULL, NULL);
 	// point the interface to the correct output object
-	switch(GUI.SoundDriver) {
-		case WIN_WAVEOUT_DRIVER:
-			S9xSoundOutput = &S9xWaveOut;
-			break;
-		case WIN_XAUDIO2_SOUND_DRIVER:
-			S9xSoundOutput = &S9xXAudio2;
-			break;
-		default:	// we default to WaveOut
-			GUI.SoundDriver = WIN_WAVEOUT_DRIVER;
-			S9xSoundOutput = &S9xWaveOut;
+	switch (GUI.SoundDriver) {
+	case WIN_WAVEOUT_DRIVER:
+		S9xSoundOutput = &S9xWaveOut;
+		break;
+
+#ifndef _M_ARM64
+	case WIN_XAUDIO2_SOUND_DRIVER:
+		S9xSoundOutput = &S9xXAudio2;
+		break;
+#endif
+
+	default:
+		GUI.SoundDriver = WIN_WAVEOUT_DRIVER;
+		S9xSoundOutput = &S9xWaveOut;
 	}
 	if(!S9xSoundOutput->InitSoundOutput())
 		return false;
